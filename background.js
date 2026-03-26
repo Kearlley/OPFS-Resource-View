@@ -56,13 +56,6 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   badgeUpdateQueue.delete(tabId);
 });
 
-// 当标签加载完成时，通知对应的开发者工具面板更新文件计数
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url && isValidTabId(tabId)) {
-    // 向所有连接的开发者工具面板发送消息，请求更新文件计数
-    chrome.runtime.sendMessage({
-      type: 'opfs:updateBadge',
-      tabId: tabId
-    });
-  }
-});
+// 当标签加载完成时，不需要主动通知devtools面板
+// devtools面板会在打开时自动调用refreshTree()获取文件计数
+// 这样可以避免连接错误，因为devtools面板可能还未打开

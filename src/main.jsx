@@ -37,19 +37,6 @@ function App() {
 
   useEffect(() => {
     refreshTree();
-    
-    // 监听来自background.js的消息，当标签加载完成时更新文件计数
-    const handleMessage = (message) => {
-      if (message?.type === 'opfs:updateBadge') {
-        refreshTree();
-      }
-    };
-    
-    chrome.runtime.onMessage.addListener(handleMessage);
-    
-    return () => {
-      chrome.runtime.onMessage.removeListener(handleMessage);
-    };
   }, []);
 
   return (
