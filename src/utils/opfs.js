@@ -38,6 +38,21 @@ async function opfsRequest(type, payload = {}) {
   });
 }
 
+let fileChangeListeners = [];
+
+// 监听文件变化消息
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === 'opfs:fileChanged') {
+    fileChangeListeners.forEach(listener => {
+      try {
+        listener(message.path);
+      } catch (e) {
+        console.error('File change listener error:', e);
+      }
+    });
+  }
+});
+
 export const inspectedFs = {
   getContextMeta() {
     return opfsRequest('opfs:ctx');
@@ -62,6 +77,15 @@ export const inspectedFs = {
   },
   removeEntry(path, recursive) {
     return opfsRequest('opfs:remove', { path, recursive: !!recursive });
+  },
+  monitorFile(path, enable) {
+    return opfsRequest('opfs:monitorFile', { path, enable });
+  },
+  onFileChange(listener) {
+    fileChangeListeners.push(listener);
+    return () => {
+      fileChangeListeners = fileChangeListeners.filter(l => l !== listener);
+    };
   }
 };
 

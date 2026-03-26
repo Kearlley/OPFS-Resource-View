@@ -114,18 +114,39 @@ OPFS Resource View is a Chrome browser extension that provides a DevTools panel 
 ## Project Structure
 
 ```
-├── dist/             # Built files
-│   ├── assets/       # Static resources
-│   ├── lib/          # Dependent libraries (such as SQLite WASM)
-│   └── ...           # Extension-related files
 ├── src/              # Source code
-│   ├── devtools.js   # DevTools panel creation
-│   ├── main.jsx      # Main application component
-│   └── styles.css    # Style files
-├── manifest.json     # Extension configuration file
-├── package.json      # Project configuration file
-├── README.md         # English description file
-└── README_CN.md      # Chinese description file
+│   ├── components/   # React components
+│   │   ├── DataGrid.jsx          # Data table component for SQLite data
+│   │   ├── DatabaseInfo.jsx      # Database metadata component
+│   │   ├── FileTree.jsx          # OPFS file system tree component
+│   │   ├── Pagination.jsx        # Pagination component for data viewing
+│   │   ├── SchemaBrowser.jsx     # Database schema browsing component
+│   │   ├── SchemaMeta.jsx        # Schema metadata component
+│   │   └── SqliteViewer.jsx      # SQLite database viewer component
+│   ├── hooks/        # Custom React hooks
+│   │   ├── useAppState.js        # Application state management
+│   │   ├── useDatabaseOperations.js # Database operation utilities
+│   │   └── useFileOperations.js  # File system operation utilities
+│   ├── utils/        # Utility functions
+│   │   ├── base64.js             # Base64 encoding/decoding utilities
+│   │   ├── helpers.js            # General helper functions
+│   │   ├── opfs.js               # OPFS file system utilities
+│   │   └── sqlite.js             # SQLite database utilities
+│   ├── constants.js              # Constant values
+│   ├── devtools.js               # DevTools panel creation
+│   ├── i18n.js                   # Internationalization support
+│   ├── main.jsx                  # Main application component
+│   └── styles.css                # Style files
+├── background.js                 # Extension background script
+├── content-script.js             # Content script for badge updates
+├── devtools.html                 # DevTools panel HTML
+├── panel.html                    # Extension panel HTML
+├── manifest.json                 # Extension configuration file
+├── package.json                  # Project configuration file
+├── vite.config.js                # Vite build configuration
+├── LICENSE                       # License file
+├── README.md                     # English description file
+└── README_CN.md                  # Chinese description file
 ```
 
 ## Development Guide

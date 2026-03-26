@@ -73,6 +73,51 @@ function fromBase64(base64) {
     return count;
   }
 
+  let fileMonitors = new Map();
+  let monitorInterval = null;
+
+  async function getFileInfo(path) {
+    try {
+      const { dir, name } = await getDirAndName(path);
+      const file = await (await dir.getFileHandle(name)).getFile();
+      return {
+        size: file.size,
+        lastModified: file.lastModified
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function startFileMonitor() {
+    if (monitorInterval) return;
+    
+    monitorInterval = setInterval(async () => {
+      for (const [path, { lastInfo, callback }] of fileMonitors) {
+        const currentInfo = await getFileInfo(path);
+        if (currentInfo && lastInfo) {
+          if (currentInfo.size !== lastInfo.size || currentInfo.lastModified !== lastInfo.lastModified) {
+            callback(path);
+            fileMonitors.set(path, { lastInfo: currentInfo, callback });
+          }
+        } else if (currentInfo && !lastInfo) {
+          callback(path);
+          fileMonitors.set(path, { lastInfo: currentInfo, callback });
+        } else if (!currentInfo && lastInfo) {
+          callback(path);
+          fileMonitors.set(path, { lastInfo: null, callback });
+        }
+      }
+    }, 2000);
+  }
+
+  function stopFileMonitor() {
+    if (monitorInterval) {
+      clearInterval(monitorInterval);
+      monitorInterval = null;
+    }
+  }
+
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!message?.type?.startsWith('opfs:')) return;
 
@@ -147,6 +192,28 @@ function fromBase64(base64) {
           const { dir, name } = await getDirAndName(message.path);
           await dir.removeEntry(name, { recursive: !!message.recursive });
           sendResponse({ ok: true, result: true });
+          return;
+        }
+
+        if (message.type === 'opfs:monitorFile') {
+          const { path, enable } = message;
+          if (enable) {
+            const lastInfo = await getFileInfo(path);
+            fileMonitors.set(path, {
+              lastInfo,
+              callback: (changedPath) => {
+                chrome.runtime.sendMessage({ type: 'opfs:fileChanged', path: changedPath });
+              }
+            });
+            startFileMonitor();
+            sendResponse({ ok: true, result: true });
+          } else {
+            fileMonitors.delete(path);
+            if (fileMonitors.size === 0) {
+              stopFileMonitor();
+            }
+            sendResponse({ ok: true, result: true });
+          }
           return;
         }
 

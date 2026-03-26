@@ -27,6 +27,7 @@ export function SqliteViewer({
   triggerMeta,
   onLoadSchema,
   onJumpPage,
+  onJumpPageInputChange,
   onSetTableSearch,
   onSetDataSearch,
   onSetActiveSchemaType,
@@ -63,7 +64,7 @@ export function SqliteViewer({
           onPageChange={(page) => onLoadSchema(selectedSchema, page)}
           onJumpPage={onJumpPage}
           jumpPageInput={jumpPageInput}
-          onJumpPageInputChange={(value) => {}}
+          onJumpPageInputChange={onJumpPageInputChange}
           loading={loading}
           disabled={!selectedSchema}
           language={language}

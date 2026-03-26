@@ -31,7 +31,8 @@ const initialState = {
   indexMeta: { unique: 0, partial: 0, origin: '', columns: [] },
   triggerMeta: { timing: '', event: '', whenExpr: '' },
   ctxMeta: { href: '', origin: '', hasOPFS: false, isSecureContext: false },
-  language: 'en'
+  language: 'en',
+  fileChanged: false
 };
 
 function appReducer(state, action) {
@@ -86,6 +87,8 @@ function appReducer(state, action) {
       return { ...state, ctxMeta: action.payload };
     case 'SET_LANGUAGE':
       return { ...state, language: action.payload };
+    case 'SET_FILE_CHANGED':
+      return { ...state, fileChanged: action.payload };
     case 'CLEAR_PREVIEW':
       return {
         ...state,
@@ -104,7 +107,8 @@ function appReducer(state, action) {
         dbInfo: { sqliteVersion: '', pageSize: 0, pageCount: 0, freelistCount: 0, journalMode: '', autoVacuum: 0, encoding: '', userVersion: 0, schemaVersion: 0 },
         activeSchemaType: 'table',
         indexMeta: { unique: 0, partial: 0, origin: '', columns: [] },
-        triggerMeta: { timing: '', event: '', whenExpr: '' }
+        triggerMeta: { timing: '', event: '', whenExpr: '' },
+        fileChanged: false
       };
     default:
       return state;

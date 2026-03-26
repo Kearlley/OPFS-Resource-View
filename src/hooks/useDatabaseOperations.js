@@ -4,6 +4,8 @@ import { PAGE_SIZE, SCHEMA_TYPES, SCHEMA_TYPE_ORDER_SQL, SCHEMA_TYPE_IN_SQL } fr
 import { isSqlite, isImage, isText } from '../utils/helpers';
 
 export function useDatabaseOperations(sqliteWorker, dispatch) {
+  let currentMonitoringPath = null;
+  let cleanupFileMonitor = null;
   const execRowsLogged = async (sql, rowMode = 'object') => {
     const start = performance.now();
     dispatch({ type: 'SET_STATUS', payload: `SQL> ${sql}` });
@@ -14,7 +16,7 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
     return rows;
   };
 
-  const loadSchemaRows = async (item, page = 1) => {
+  const loadSchemaRows = async (item, page = 1, dataSearchTerm = '') => {
     dispatch({ type: 'SET_SELECTED_SCHEMA', payload: item });
     dispatch({ type: 'SET_GRID_COLUMNS', payload: [] });
     dispatch({ type: 'SET_GRID_ROWS', payload: [] });
@@ -43,14 +45,21 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
           if (col?.name) columnMap[col.name] = col.type || '';
         }
 
-        const countSql = `SELECT count(*) AS cnt FROM ${target}`;
+        const infoColumns = Object.keys(columnMap);
+        let whereClause = '';
+        if (dataSearchTerm.trim()) {
+          const searchConditions = infoColumns.map(col => `${qIdent(col)} LIKE '%${dataSearchTerm}%'`).join(' OR ');
+          whereClause = ` WHERE ${searchConditions}`;
+        }
+
+        const countSql = `SELECT count(*) AS cnt FROM ${target}${whereClause}`;
         const countRows = await execRowsLogged(countSql, 'object');
         const allRows = Number(countRows[0]?.cnt ?? 0);
         dispatch({ type: 'SET_TOTAL_ROWS', payload: allRows });
         dispatch({ type: 'SET_CURRENT_PAGE', payload: safePage });
         dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: String(safePage) });
 
-        const dataSql = `SELECT * FROM ${target} LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
+        const dataSql = `SELECT * FROM ${target}${whereClause} LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
         const resultRows = await execRowsLogged(dataSql, 'object');
         const columns = resultRows[0] ? Object.keys(resultRows[0]) : Object.keys(columnMap);
         dispatch({ type: 'SET_GRID_ROWS', payload: resultRows });
@@ -198,6 +207,17 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
     dispatch({ type: 'SET_LOADING', payload: true });
     clearPreview();
     dispatch({ type: 'SET_STATUS', payload: `正在打开数据库: ${node.path}` });
+    
+    // 清理之前的文件监控
+    if (cleanupFileMonitor) {
+      cleanupFileMonitor();
+      cleanupFileMonitor = null;
+    }
+    if (currentMonitoringPath) {
+      await inspectedFs.monitorFile(currentMonitoringPath, false);
+      currentMonitoringPath = null;
+    }
+    
     try {
       await sqliteWorker.init();
       await sqliteWorker.close();
@@ -298,6 +318,104 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
       } else {
         dispatch({ type: 'SET_STATUS', payload: `数据库已打开: ${node.path}（schema=${schemaRows.length}, dbs=${mappedDbList.length || 1}）` });
       }
+      
+      // 开始监控文件变化
+      currentMonitoringPath = node.path;
+      await inspectedFs.monitorFile(currentMonitoringPath, true);
+      
+      // 设置文件变化监听器
+      cleanupFileMonitor = inspectedFs.onFileChange(async (changedPath) => {
+        if (changedPath === currentMonitoringPath) {
+          dispatch({ type: 'SET_FILE_CHANGED', payload: true });
+          dispatch({ type: 'SET_STATUS', payload: `检测到数据库文件变化: ${changedPath}` });
+          
+          // 自动重新加载数据库
+          try {
+            dispatch({ type: 'SET_LOADING', payload: true });
+            await sqliteWorker.close();
+            
+            const newDbBytes = await inspectedFs.readBytes(changedPath);
+            const newWalPath = `${changedPath}-wal`;
+            const newShmPath = `${changedPath}-shm`;
+            
+            let newWalBytes = null;
+            let newShmBytes = null;
+            
+            try {
+              newWalBytes = await inspectedFs.readBytes(newWalPath);
+            } catch (_) {
+              newWalBytes = null;
+            }
+            
+            try {
+              newShmBytes = await inspectedFs.readBytes(newShmPath);
+            } catch (_) {
+              newShmBytes = null;
+            }
+            
+            const newTempPath = `cache/${Date.now()}-${node.name}`;
+            await writeExtensionOpfsFile(newTempPath, newDbBytes);
+            if (newWalBytes) await writeExtensionOpfsFile(`${newTempPath}-wal`, newWalBytes);
+            if (newShmBytes) await writeExtensionOpfsFile(`${newTempPath}-shm`, newShmBytes);
+            
+            await sqliteWorker.open(newTempPath);
+            
+            // 重新加载数据库信息和schema
+            const newDbListRows = await execRowsLogged('PRAGMA database_list', 'object');
+            const newMappedDbList = newDbListRows
+              .map((r) => ({ seq: r.seq, name: r.name, file: r.file }))
+              .filter((r) => r.name);
+            dispatch({ type: 'SET_DB_LIST', payload: newMappedDbList });
+            
+            const newMasterCountRows = await execRowsLogged("SELECT count(*) AS cnt FROM sqlite_master", 'object');
+            const newSqliteMasterCount = Number(newMasterCountRows[0]?.cnt ?? 0);
+            
+            const newSchemaCountRows = await execRowsLogged("SELECT count(*) AS cnt FROM sqlite_schema", 'object');
+            const newSqliteSchemaCount = Number(newSchemaCountRows[0]?.cnt ?? 0);
+            
+            dispatch({ type: 'SET_DIAG', payload: { sqliteMasterCount: newSqliteMasterCount, sqliteSchemaCount: newSqliteSchemaCount, dbList: newMappedDbList } });
+            
+            const newTargets = newMappedDbList.length ? newMappedDbList : [{ name: 'main', file: '' }];
+            const newSchemaRows = [];
+            for (const db of newTargets) {
+              const dbName = db.name || 'main';
+              const schemaSql = `
+                SELECT
+                  m.type,
+                  m.name,
+                  m.tbl_name,
+                  m.sql,
+                  m.rootpage,
+                  CASE WHEN m.type='table' THEN EXISTS(SELECT 1 FROM ${qIdent(dbName)}.sqlite_master i WHERE i.type='index' AND i.tbl_name=m.name) ELSE 0 END AS has_index,
+                  CASE WHEN m.type='table' THEN EXISTS(SELECT 1 FROM ${qIdent(dbName)}.sqlite_master t WHERE t.type='trigger' AND t.tbl_name=m.name) ELSE 0 END AS has_trigger,
+                  CASE WHEN m.type='index' THEN CASE WHEN m.sql IS NULL THEN 1 ELSE 0 END ELSE 0 END AS is_auto_index
+                FROM ${qIdent(dbName)}.sqlite_master m
+                WHERE m.type IN (${SCHEMA_TYPE_IN_SQL})
+                ORDER BY CASE m.type ${SCHEMA_TYPE_ORDER_SQL} ELSE 99 END, m.name
+              `;
+              const rows = await execRowsLogged(schemaSql, 'object');
+              rows.forEach((row) => newSchemaRows.push({ ...row, dbName }));
+            }
+            
+            const newGroups = Object.fromEntries(SCHEMA_TYPES.map((t) => [t, []]));
+            for (const s of newSchemaRows) if (newGroups[s.type]) newGroups[s.type].push(s);
+            dispatch({ type: 'SET_SCHEMA_GROUPS', payload: newGroups });
+            
+            // 重新加载当前选中的schema
+            const selectedSchema = newGroups.table[0] || newGroups.view[0] || null;
+            if (selectedSchema) {
+              await loadSchemaRows(selectedSchema, 1);
+            }
+            
+            dispatch({ type: 'SET_STATUS', payload: `数据库已自动更新: ${changedPath}` });
+          } catch (err) {
+            dispatch({ type: 'SET_STATUS', payload: `自动更新数据库失败: ${err.message}` });
+          } finally {
+            dispatch({ type: 'SET_LOADING', payload: false });
+            dispatch({ type: 'SET_FILE_CHANGED', payload: false });
+          }
+        }
+      });
     } catch (err) {
       dispatch({ type: 'SET_STATUS', payload: `打开 sqlite 失败: ${err.message}` });
     } finally {
