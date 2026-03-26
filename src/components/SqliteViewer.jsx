@@ -5,6 +5,7 @@ import { DatabaseInfo } from './DatabaseInfo';
 import { DataGrid } from './DataGrid';
 import { SchemaMeta } from './SchemaMeta';
 import { PAGE_SIZE } from '../constants';
+import { useTranslation } from '../i18n';
 
 export function SqliteViewer({
   schemaGroups,
@@ -30,8 +31,11 @@ export function SqliteViewer({
   onSetDataSearch,
   onSetActiveSchemaType,
   onSetSortState,
-  loading
+  loading,
+  language
 }) {
+  const t = useTranslation(language);
+
   return (
     <div className="db-layout">
       <SchemaBrowser
@@ -42,13 +46,14 @@ export function SqliteViewer({
         onLoadSchema={onLoadSchema}
         onSetTableSearch={onSetTableSearch}
         onSetActiveSchemaType={onSetActiveSchemaType}
+        language={language}
       />
 
       <div className="result-pane">
-        <div className="section-title">Data Preview {selectedSchema ? `· ${(selectedSchema.dbName || 'main')}.${selectedSchema.name} (${selectedSchema.type})` : ''}</div>
+        <div className="section-title">{t.dataPreview} {selectedSchema ? `· ${(selectedSchema.dbName || 'main')}.${selectedSchema.name} (${selectedSchema.type})` : ''}</div>
         {selectedSchema?.sql && <pre className="sql-box">{selectedSchema.sql}</pre>}
         
-        <DatabaseInfo dbList={dbList} diag={diag} dbInfo={dbInfo} />
+        <DatabaseInfo dbList={dbList} diag={diag} dbInfo={dbInfo} language={language} />
         
         <Pagination
           currentPage={currentPage}
@@ -60,12 +65,14 @@ export function SqliteViewer({
           onJumpPageInputChange={(value) => {}}
           loading={loading}
           disabled={!selectedSchema}
+          language={language}
         />
         
         <SchemaMeta
           selectedSchema={selectedSchema}
           indexMeta={indexMeta}
           triggerMeta={triggerMeta}
+          language={language}
         />
         
         <DataGrid
@@ -77,6 +84,7 @@ export function SqliteViewer({
           dataSearchTerm={dataSearchTerm}
           onSetDataSearch={onSetDataSearch}
           onSetSortState={onSetSortState}
+          language={language}
         />
       </div>
     </div>

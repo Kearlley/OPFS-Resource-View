@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from '../i18n';
 
-export function Pagination({ currentPage, totalRows, pageSize, onPageChange, onJumpPage, jumpPageInput, onJumpPageInputChange, loading, disabled }) {
+export function Pagination({ currentPage, totalRows, pageSize, onPageChange, onJumpPage, jumpPageInput, onJumpPageInputChange, loading, disabled, language }) {
+  const t = useTranslation(language);
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
 
   return (
@@ -17,7 +19,7 @@ export function Pagination({ currentPage, totalRows, pageSize, onPageChange, onJ
       >
         Prev
       </button>
-      <span>Page {currentPage} / {totalPages}</span>
+      <span>{t.page} {currentPage} {t.of} {totalPages}</span>
       <span>Total: {totalRows}</span>
       <div className="page-jump-wrap">
         <input
@@ -27,9 +29,9 @@ export function Pagination({ currentPage, totalRows, pageSize, onPageChange, onJ
           onKeyDown={(e) => {
             if (e.key === 'Enter') onJumpPage();
           }}
-          placeholder="Page"
+          placeholder={t.page}
         />
-        <button onClick={onJumpPage} disabled={loading || disabled}>Go</button>
+        <button onClick={onJumpPage} disabled={loading || disabled}>{t.go}</button>
       </div>
       <button
         onClick={() => onPageChange(currentPage + 1)}

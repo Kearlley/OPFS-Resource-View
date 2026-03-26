@@ -55,3 +55,14 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   tabCounts.delete(tabId);
   badgeUpdateQueue.delete(tabId);
 });
+
+// 当标签加载完成时，通知对应的开发者工具面板更新文件计数
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && isValidTabId(tabId)) {
+    // 向所有连接的开发者工具面板发送消息，请求更新文件计数
+    chrome.runtime.sendMessage({
+      type: 'opfs:updateBadge',
+      tabId: tabId
+    });
+  }
+});

@@ -1,5 +1,6 @@
 import React from 'react';
 import { PAGE_SIZE } from '../constants';
+import { useTranslation } from '../i18n';
 
 export function DataGrid({
   gridColumns,
@@ -9,8 +10,10 @@ export function DataGrid({
   currentPage,
   dataSearchTerm,
   onSetDataSearch,
-  onSetSortState
+  onSetSortState,
+  language
 }) {
+  const t = useTranslation(language);
   return (
     <>
       <div className="data-search-wrap">
@@ -18,7 +21,7 @@ export function DataGrid({
           className="data-search-input"
           value={dataSearchTerm}
           onChange={(e) => onSetDataSearch(e.target.value)}
-          placeholder="Search current page rows..."
+          placeholder={t.searchData}
         />
       </div>
       <div className="grid-wrap">
@@ -49,7 +52,7 @@ export function DataGrid({
             {gridRows.length === 0 ? (
               <tr>
                 <td className="grid-empty-cell" colSpan={Math.max(1, gridColumns.length + 1)}>
-                  <div className="empty grid-empty">无匹配记录（可清空搜索词重试）。</div>
+                  <div className="empty grid-empty">{t.noData}</div>
                 </td>
               </tr>
             ) : (

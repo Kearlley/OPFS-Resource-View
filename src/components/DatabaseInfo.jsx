@@ -1,15 +1,17 @@
 import React from 'react';
+import { useTranslation } from '../i18n';
 
-export function DatabaseInfo({ dbList, diag, dbInfo }) {
+export function DatabaseInfo({ dbList, diag, dbInfo, language }) {
+  const t = useTranslation(language);
   return (
     <div className="diag-box">
       <div className="db-meta-card">
         <div className="db-meta-row">
-          <span className="meta-badge">db list</span>
+          <span className="meta-badge">{t.databaseList}</span>
           <span className="meta-chip">{dbList.map((d) => `${d.name}@${d.file}`).join(' | ') || '(none)'}</span>
         </div>
         <div className="db-meta-row">
-          <span className="meta-badge">sqlite</span>
+          <span className="meta-badge">{t.sqliteVersion}</span>
           <span className="meta-chip">version: {dbInfo.sqliteVersion || '(unknown)'}</span>
         </div>
         <div className="db-meta-row">

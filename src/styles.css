@@ -146,7 +146,7 @@ button:disabled {
 
 .action-bar {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
@@ -709,4 +709,25 @@ td {
 
 *::-webkit-scrollbar-corner {
   background: #151515;
+}
+
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.language-select {
+  padding: 4px 8px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-3);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.language-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

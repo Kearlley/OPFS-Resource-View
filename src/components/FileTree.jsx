@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../i18n';
 
-function TreeNode({ node, selectedPath, onSelect, onRename, onDelete, onDownload }) {
+function TreeNode({ node, selectedPath, onSelect, onRename, onDelete, onDownload, language }) {
+  const t = useTranslation(language);
   const [expanded, setExpanded] = useState(true);
 
   const actionButtons = (
     <div className="node-actions" onClick={(e) => e.stopPropagation()}>
-      <button className="node-action" title="重命名" onClick={() => onRename(node)}>R</button>
-      <button className="node-action" title="删除" onClick={() => onDelete(node)}>D</button>
+      <button className="node-action" title={t.rename} onClick={() => onRename(node)}>R</button>
+      <button className="node-action" title={t.delete} onClick={() => onDelete(node)}>D</button>
       {node.kind === 'file' && (
-        <button className="node-action" title="下载" onClick={() => onDownload(node)}>↓</button>
+        <button className="node-action" title={t.download} onClick={() => onDownload(node)}>↓</button>
       )}
     </div>
   );
@@ -32,6 +34,7 @@ function TreeNode({ node, selectedPath, onSelect, onRename, onDelete, onDownload
                 onRename={onRename}
                 onDelete={onDelete}
                 onDownload={onDownload}
+                language={language}
               />
             ))}
           </div>
@@ -49,7 +52,7 @@ function TreeNode({ node, selectedPath, onSelect, onRename, onDelete, onDownload
   );
 }
 
-export function FileTree({ tree, selectedPath, onSelect, onRename, onDelete, onDownload }) {
+export function FileTree({ tree, selectedPath, onSelect, onRename, onDelete, onDownload, language }) {
   return (
     <div className="tree-panel">
       {tree.length === 0 ? (
@@ -64,6 +67,7 @@ export function FileTree({ tree, selectedPath, onSelect, onRename, onDelete, onD
             onRename={onRename}
             onDelete={onDelete}
             onDownload={onDownload}
+            language={language}
           />
         ))
       )}

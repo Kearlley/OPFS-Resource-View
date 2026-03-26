@@ -30,7 +30,8 @@ const initialState = {
   activeSchemaType: 'table',
   indexMeta: { unique: 0, partial: 0, origin: '', columns: [] },
   triggerMeta: { timing: '', event: '', whenExpr: '' },
-  ctxMeta: { href: '', origin: '', hasOPFS: false, isSecureContext: false }
+  ctxMeta: { href: '', origin: '', hasOPFS: false, isSecureContext: false },
+  language: 'en'
 };
 
 function appReducer(state, action) {
@@ -83,6 +84,8 @@ function appReducer(state, action) {
       return { ...state, triggerMeta: action.payload };
     case 'SET_CTX_META':
       return { ...state, ctxMeta: action.payload };
+    case 'SET_LANGUAGE':
+      return { ...state, language: action.payload };
     case 'CLEAR_PREVIEW':
       return {
         ...state,

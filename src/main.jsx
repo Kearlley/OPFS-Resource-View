@@ -8,6 +8,7 @@ import { useFileOperations } from './hooks/useFileOperations';
 import { useDatabaseOperations } from './hooks/useDatabaseOperations';
 import { SqliteWorker } from './utils/sqlite';
 import { isSqlite, isImage, isText } from './utils/helpers';
+import { useTranslation } from './i18n';
 
 function App() {
   const sqliteRef = useRef(new SqliteWorker());
@@ -18,8 +19,10 @@ function App() {
     schemaGroups, selectedSchema, gridColumns, gridRows, columnTypes, 
     sortState, currentPage, totalRows, jumpPageInput, tableSearchTerm, 
     dataSearchTerm, dbList, diag, dbInfo, activeSchemaType, indexMeta, 
-    triggerMeta, ctxMeta 
+    triggerMeta, ctxMeta, language 
   } = state;
+  
+  const t = useTranslation(language);
 
   const previewMode = useMemo(() => {
     if (!selectedFile) return 'welcome';
@@ -34,6 +37,19 @@ function App() {
 
   useEffect(() => {
     refreshTree();
+    
+    // 监听来自background.js的消息，当标签加载完成时更新文件计数
+    const handleMessage = (message) => {
+      if (message?.type === 'opfs:updateBadge') {
+        refreshTree();
+      }
+    };
+    
+    chrome.runtime.onMessage.addListener(handleMessage);
+    
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleMessage);
+    };
   }, []);
 
   return (
@@ -41,18 +57,29 @@ function App() {
       <aside className="left-pane">
         <div className="pane-header">
           <div>
-            <h1>OPFS Explorer</h1>
-            <p>文件系统</p>
-            <p className="ctx-line">Origin: {ctxMeta.origin || 'unknown'}</p>
-            <p className="ctx-line">Secure: {String(!!ctxMeta.isSecureContext)} | OPFS: {String(!!ctxMeta.hasOPFS)}</p>
+            <h1>{t.appTitle}</h1>
+            <p>{t.fileSystem}</p>
+            <p className="ctx-line">{t.origin.replace('{origin}', ctxMeta.origin || 'unknown')}</p>
+            <p className="ctx-line">{t.secure.replace('{secure}', String(!!ctxMeta.isSecureContext)).replace('{opfs}', String(!!ctxMeta.hasOPFS))}</p>
           </div>
-          <button onClick={refreshTree} disabled={loading}>刷新</button>
+          <div className="header-actions">
+            <select 
+              value={language} 
+              onChange={(e) => dispatch({ type: 'SET_LANGUAGE', payload: e.target.value })} 
+              disabled={loading}
+              className="language-select"
+            >
+              <option value="cn">{t.chinese}</option>
+              <option value="en">{t.english}</option>
+            </select>
+          </div>
         </div>
 
         <div className="action-bar">
-          <button onClick={() => createEntry('file', selectedFile)} disabled={loading}>+ FILE</button>
-          <button onClick={() => createEntry('directory', selectedFile)} disabled={loading}>+ DIR</button>
-          <button onClick={() => uploadInputRef.current?.click()} disabled={loading}>UPLOAD</button>
+          <button onClick={() => createEntry('file', selectedFile)} disabled={loading}>{t.createFile}</button>
+          <button onClick={() => createEntry('directory', selectedFile)} disabled={loading}>{t.createDir}</button>
+          <button onClick={() => uploadInputRef.current?.click()} disabled={loading}>{t.upload}</button>
+          <button onClick={refreshTree} disabled={loading}>{t.refresh}</button>
           <input
             ref={uploadInputRef}
             type="file"
@@ -68,16 +95,17 @@ function App() {
           onRename={(node) => renameNode(node, selectedFile)}
           onDelete={(node) => deleteNode(node, selectedFile, imagePreviewUrl)}
           onDownload={(node) => downloadNode(node, selectedFile)}
+          language={language}
         />
       </aside>
 
       <section className="center-pane">
         <header className="pane-header top">
           <div>
-            <h2>{selectedFile?.path || '未选择文件'}</h2>
-            <p>{previewMode === 'sqlite' ? 'SQLite 数据库视图（只读）' : previewMode === 'image' ? '图片预览' : previewMode === 'text' ? '文本预览' : '等待选择文件'}</p>
+            <h2>{selectedFile?.path || t.noFileSelected}</h2>
+            <p>{previewMode === 'sqlite' ? t.sqliteView : previewMode === 'image' ? t.imagePreview : previewMode === 'text' ? t.textPreview : t.waitingFile}</p>
           </div>
-          <span className="readonly-tag">READ ONLY</span>
+          <span className="readonly-tag">{t.readOnly}</span>
         </header>
 
         <div className="content-body">
@@ -107,6 +135,7 @@ function App() {
               onSetActiveSchemaType={(value) => dispatch({ type: 'SET_ACTIVE_SCHEMA_TYPE', payload: value })}
               onSetSortState={(value) => dispatch({ type: 'SET_SORT_STATE', payload: value })}
               loading={loading}
+              language={language}
             />
           )}
 
@@ -116,11 +145,11 @@ function App() {
             </div>
           )}
           {previewMode === 'text' && <div className="text-preview"><pre>{textPreview}</pre></div>}
-          {previewMode === 'unsupported' && <div className="empty">当前文件类型不支持预览（支持 sqlite/db、图片、文本/log）。</div>}
-          {previewMode === 'welcome' && <div className="empty">请在左侧选择 OPFS 文件。点击 sqlite/图片/文本文件可自动预览。</div>}
+          {previewMode === 'unsupported' && <div className="empty">{t.unsupported}</div>}
+          {previewMode === 'welcome' && <div className="empty">{t.welcome}</div>}
         </div>
 
-        <footer className="status-bar">{loading ? '处理中...' : status}</footer>
+        <footer className="status-bar">{loading ? t.processing : status}</footer>
       </section>
     </div>
   );

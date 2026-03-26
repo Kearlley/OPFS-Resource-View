@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from '../i18n';
 
-export function SchemaMeta({ selectedSchema, indexMeta, triggerMeta }) {
+export function SchemaMeta({ selectedSchema, indexMeta, triggerMeta, language }) {
+  const t = useTranslation(language);
   if (!selectedSchema) return null;
 
   return (
@@ -8,13 +10,13 @@ export function SchemaMeta({ selectedSchema, indexMeta, triggerMeta }) {
       {selectedSchema.type === 'index' && (
         <div className="index-meta-card">
           <div className="index-meta-row">
-            <span className="meta-badge">index meta</span>
-            <span className="meta-chip">origin: {indexMeta.origin || '(unknown)'}</span>
-            <span className={`meta-chip ${indexMeta.unique ? 'ok' : 'no'}`}>unique: {indexMeta.unique ? 'Y' : 'N'}</span>
-            <span className={`meta-chip ${indexMeta.partial ? 'ok' : 'no'}`}>partial: {indexMeta.partial ? 'Y' : 'N'}</span>
+            <span className="meta-badge">{t.indexes} meta</span>
+            <span className="meta-chip">{t.origin}: {indexMeta.origin || '(unknown)'}</span>
+            <span className={`meta-chip ${indexMeta.unique ? 'ok' : 'no'}`}>{t.unique}: {indexMeta.unique ? 'Y' : 'N'}</span>
+            <span className={`meta-chip ${indexMeta.partial ? 'ok' : 'no'}`}>{t.partial}: {indexMeta.partial ? 'Y' : 'N'}</span>
           </div>
           <div className="index-meta-row columns">
-            <span className="meta-badge">columns</span>
+            <span className="meta-badge">{t.columns}</span>
             <div className="index-columns-wrap">
               {indexMeta.columns.length
                 ? indexMeta.columns.map((c) => (
@@ -29,8 +31,8 @@ export function SchemaMeta({ selectedSchema, indexMeta, triggerMeta }) {
       )}
       {selectedSchema.type === 'trigger' && (
         <>
-          <div>trigger meta: timing={triggerMeta.timing || '(unknown)'} | event={triggerMeta.event || '(unknown)'}</div>
-          <div>when: {triggerMeta.whenExpr || '(none)'}</div>
+          <div>{t.triggers} meta: {t.timing}={triggerMeta.timing || '(unknown)'} | {t.event}={triggerMeta.event || '(unknown)'}</div>
+          <div>{t.when}: {triggerMeta.whenExpr || '(none)'}</div>
         </>
       )}
     </div>

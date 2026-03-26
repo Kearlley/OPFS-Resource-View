@@ -1,5 +1,6 @@
 import React from 'react';
 import { SCHEMA_TYPES } from '../constants';
+import { useTranslation } from '../i18n';
 
 export function SchemaBrowser({
   schemaGroups,
@@ -8,8 +9,10 @@ export function SchemaBrowser({
   tableSearchTerm,
   onLoadSchema,
   onSetTableSearch,
-  onSetActiveSchemaType
+  onSetActiveSchemaType,
+  language
 }) {
+  const t = useTranslation(language);
   const flatSchemaCount = Object.values(schemaGroups).reduce((acc, group) => acc + (group?.length || 0), 0);
   const filteredSchemaItems = schemaGroups[activeSchemaType] || [];
 
@@ -24,7 +27,7 @@ export function SchemaBrowser({
             className={`schema-tab ${activeSchemaType === type ? 'active' : ''}`}
             onClick={() => onSetActiveSchemaType(type)}
           >
-            {type.toUpperCase()} ({schemaGroups[type]?.length || 0})
+            {t.schemaTypes[type]} ({schemaGroups[type]?.length || 0})
           </button>
         ))}
       </div>
@@ -34,7 +37,7 @@ export function SchemaBrowser({
           className="table-search-input"
           value={tableSearchTerm}
           onChange={(e) => onSetTableSearch(e.target.value)}
-          placeholder={`Search ${activeSchemaType.toUpperCase()}...`}
+          placeholder={t.searchTables}
         />
       </div>
       
@@ -63,7 +66,7 @@ export function SchemaBrowser({
           </button>
         ))}
         {filteredSchemaItems.length === 0 && (
-          <div className="empty schema-empty">No {activeSchemaType.toUpperCase()} objects.</div>
+          <div className="empty schema-empty">No {t.schemaTypes[activeSchemaType]} objects.</div>
         )}
       </div>
     </div>
