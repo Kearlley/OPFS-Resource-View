@@ -53,7 +53,9 @@ export function SqliteViewer({
         <div className="section-title">{t.dataPreview} {selectedSchema ? `· ${(selectedSchema.dbName || 'main')}.${selectedSchema.name} (${selectedSchema.type})` : ''}</div>
         {selectedSchema?.sql && <pre className="sql-box">{selectedSchema.sql}</pre>}
         
-        <DatabaseInfo dbList={dbList} diag={diag} dbInfo={dbInfo} language={language} />
+        <div className="diag-box-container">
+          <DatabaseInfo dbList={dbList} diag={diag} dbInfo={dbInfo} language={language} />
+        </div>
         
         <Pagination
           currentPage={currentPage}
@@ -68,12 +70,16 @@ export function SqliteViewer({
           language={language}
         />
         
-        <SchemaMeta
-          selectedSchema={selectedSchema}
-          indexMeta={indexMeta}
-          triggerMeta={triggerMeta}
-          language={language}
-        />
+        {selectedSchema && (
+          <div className="diag-box-container">
+            <SchemaMeta
+              selectedSchema={selectedSchema}
+              indexMeta={indexMeta}
+              triggerMeta={triggerMeta}
+              language={language}
+            />
+          </div>
+        )}
         
         <DataGrid
           gridColumns={gridColumns}

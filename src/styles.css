@@ -464,6 +464,11 @@ button:disabled {
   word-break: break-all;
 }
 
+.diag-box-container {
+  width: 100%;
+  overflow: hidden;
+}
+
 .db-meta-card {
   display: grid;
   gap: 6px;
