@@ -6,11 +6,17 @@ const createEmptySchemaGroups = () => {
   return Object.fromEntries(SCHEMA_TYPES.map((type) => [type, []]));
 };
 
-const initialState = {
-  tree: [],
-  selectedFile: null,
-  loading: false,
-  status: 'Ready',
+const createEmptyDiag = () => ({ sqliteMasterCount: 0, sqliteSchemaCount: 0, dbList: [] });
+
+const createEmptyDbInfo = () => ({ sqliteVersion: '', pageSize: 0, pageCount: 0, freelistCount: 0, journalMode: '', autoVacuum: 0, encoding: '', userVersion: 0, schemaVersion: 0 });
+
+const createEmptyIndexMeta = () => ({ unique: 0, partial: 0, origin: '', columns: [] });
+
+const createEmptyTriggerMeta = () => ({ timing: '', event: '', whenExpr: '' });
+
+const createEmptyCtxMeta = () => ({ href: '', origin: '', hasOPFS: false, isSecureContext: false });
+
+const getPreviewResetState = () => ({
   textPreview: '',
   imagePreviewUrl: '',
   schemaGroups: createEmptySchemaGroups(),
@@ -18,21 +24,29 @@ const initialState = {
   gridColumns: [],
   gridRows: [],
   columnTypes: {},
-  sortState: { key: '', dir: 'asc' },
   currentPage: 1,
   totalRows: 0,
   jumpPageInput: '1',
+  dbList: [],
+  diag: createEmptyDiag(),
+  dbInfo: createEmptyDbInfo(),
+  activeSchemaType: 'table',
+  indexMeta: createEmptyIndexMeta(),
+  triggerMeta: createEmptyTriggerMeta(),
+  fileChanged: false
+});
+
+const initialState = {
+  tree: [],
+  selectedFile: null,
+  loading: false,
+  status: 'Ready',
+  sortState: { key: '', dir: 'asc' },
   tableSearchTerm: '',
   dataSearchTerm: '',
-  dbList: [],
-  diag: { sqliteMasterCount: 0, sqliteSchemaCount: 0, dbList: [] },
-  dbInfo: { sqliteVersion: '', pageSize: 0, pageCount: 0, freelistCount: 0, journalMode: '', autoVacuum: 0, encoding: '', userVersion: 0, schemaVersion: 0 },
-  activeSchemaType: 'table',
-  indexMeta: { unique: 0, partial: 0, origin: '', columns: [] },
-  triggerMeta: { timing: '', event: '', whenExpr: '' },
-  ctxMeta: { href: '', origin: '', hasOPFS: false, isSecureContext: false },
-  language: 'en',
-  fileChanged: false
+  ...getPreviewResetState(),
+  ctxMeta: createEmptyCtxMeta(),
+  language: 'en'
 };
 
 function appReducer(state, action) {
@@ -90,26 +104,7 @@ function appReducer(state, action) {
     case 'SET_FILE_CHANGED':
       return { ...state, fileChanged: action.payload };
     case 'CLEAR_PREVIEW':
-      return {
-        ...state,
-        textPreview: '',
-        imagePreviewUrl: '',
-        schemaGroups: createEmptySchemaGroups(),
-        selectedSchema: null,
-        gridColumns: [],
-        gridRows: [],
-        columnTypes: {},
-        currentPage: 1,
-        totalRows: 0,
-        jumpPageInput: '1',
-        dbList: [],
-        diag: { sqliteMasterCount: 0, sqliteSchemaCount: 0, dbList: [] },
-        dbInfo: { sqliteVersion: '', pageSize: 0, pageCount: 0, freelistCount: 0, journalMode: '', autoVacuum: 0, encoding: '', userVersion: 0, schemaVersion: 0 },
-        activeSchemaType: 'table',
-        indexMeta: { unique: 0, partial: 0, origin: '', columns: [] },
-        triggerMeta: { timing: '', event: '', whenExpr: '' },
-        fileChanged: false
-      };
+      return { ...state, ...getPreviewResetState() };
     default:
       return state;
   }

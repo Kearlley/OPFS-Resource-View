@@ -28,6 +28,7 @@ export function useFileOperations(sqliteWorker, dispatch) {
       const list = await inspectedFs.listTree();
       const safe = Array.isArray(list) ? list : [];
       dispatch({ type: 'SET_TREE', payload: safe });
+      dispatch({ type: 'SET_CTX_META', payload: meta });
 
       if (!meta?.hasOPFS) dispatch({ type: 'SET_STATUS', payload: '当前页面上下文不支持 OPFS，确认该页面可访问 navigator.storage.getDirectory' });
       else if (safe.length === 0) dispatch({ type: 'SET_STATUS', payload: `OPFS 为空（origin=${meta?.origin || 'unknown'}）` });

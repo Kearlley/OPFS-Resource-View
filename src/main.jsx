@@ -9,6 +9,7 @@ import { useDatabaseOperations } from './hooks/useDatabaseOperations';
 import { SqliteWorker } from './utils/sqlite';
 import { isSqlite, isImage, isText } from './utils/helpers';
 import { useTranslation } from './i18n';
+import { FaFile, FaFolder, FaUpload, FaSync } from 'react-icons/fa';
 
 function App() {
   const sqliteRef = useRef(new SqliteWorker());
@@ -42,17 +43,17 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="left-pane">
-        <div className="pane-header">
-          <div>
+        <div className="pane-header left-header">
+          <div className="header-main">
             <h1>{t.appTitle}</h1>
             <p>{t.fileSystem}</p>
-            <p className="ctx-line">{t.origin.replace('{origin}', ctxMeta.origin || 'unknown')}</p>
-            <p className="ctx-line">{t.secure.replace('{secure}', String(!!ctxMeta.isSecureContext)).replace('{opfs}', String(!!ctxMeta.hasOPFS))}</p>
+            <p className="ctx-line">{t.origin.replace('{origin}', (ctxMeta.origin && ctxMeta.origin !== 'null') ? ctxMeta.origin : 'unknown')}</p>
+            <p className="ctx-line">{t.secure.replace('{secure}', ctxMeta.isSecureContext ? 'Yes' : 'No').replace('{opfs}', ctxMeta.hasOPFS ? 'Yes' : 'No')}</p>
           </div>
           <div className="header-actions">
-            <select 
-              value={language} 
-              onChange={(e) => dispatch({ type: 'SET_LANGUAGE', payload: e.target.value })} 
+            <select
+              value={language}
+              onChange={(e) => dispatch({ type: 'SET_LANGUAGE', payload: e.target.value })}
               disabled={loading}
               className="language-select"
             >
@@ -63,10 +64,18 @@ function App() {
         </div>
 
         <div className="action-bar">
-          <button onClick={() => createEntry('file', selectedFile)} disabled={loading}>{t.createFile}</button>
-          <button onClick={() => createEntry('directory', selectedFile)} disabled={loading}>{t.createDir}</button>
-          <button onClick={() => uploadInputRef.current?.click()} disabled={loading}>{t.upload}</button>
-          <button onClick={refreshTree} disabled={loading}>{t.refresh}</button>
+          <button className="action-btn" title={t.actionNewFile} onClick={() => createEntry('file', selectedFile)} disabled={loading}>
+            <FaFile />
+          </button>
+          <button className="action-btn" title={t.actionNewDir} onClick={() => createEntry('directory', selectedFile)} disabled={loading}>
+            <FaFolder />
+          </button>
+          <button className="action-btn" title={t.actionUpload} onClick={() => uploadInputRef.current?.click()} disabled={loading}>
+            <FaUpload />
+          </button>
+          <button className="action-btn" title={t.actionRefresh} onClick={refreshTree} disabled={loading}>
+            <FaSync />
+          </button>
           <input
             ref={uploadInputRef}
             type="file"
@@ -88,11 +97,28 @@ function App() {
 
       <section className="center-pane">
         <header className="pane-header top">
-          <div>
-            <h2>{selectedFile?.path || t.noFileSelected}</h2>
-            <p>{previewMode === 'sqlite' ? t.sqliteView : previewMode === 'image' ? t.imagePreview : previewMode === 'text' ? t.textPreview : t.waitingFile}</p>
+          <div className="header-main">
+            <div className="header-title-row">
+              <h2>{selectedFile?.path || t.noFileSelected}</h2>
+              <span className="readonly-tag">{t.readOnly}</span>
+            </div>
+            <p className="header-subtitle">
+              {previewMode === 'sqlite' ? '' : previewMode === 'image' ? t.imagePreview : previewMode === 'text' ? t.textPreview : t.waitingFile}
+            </p>
+            {previewMode === 'sqlite' && dbInfo && (
+              <div className="db-info-bar">
+                <span className="db-info-item">{t.databaseList}: {dbList.map((d) => `${d.name}@${d.file}`).join(' | ') || '(none)'}</span>
+                <span className="db-info-sep">|</span>
+                <span className="db-info-item">session: page_size: {dbInfo.pageSize} | page_count: {dbInfo.pageCount} | freelist: {dbInfo.freelistCount}</span>
+                <span className="db-info-sep">|</span>
+                <span className="db-info-item">runtime: journal: {dbInfo.journalMode || '(unknown)'} | auto_vacuum: {dbInfo.autoVacuum} | encoding: {dbInfo.encoding || '(unknown)'}</span>
+                <span className="db-info-sep">|</span>
+                <span className="db-info-item">versioning: user_version: {dbInfo.userVersion} | schema_version: {dbInfo.schemaVersion}</span>
+                <span className="db-info-sep">|</span>
+                <span className="db-info-item">objects: sqlite_master: {diag.sqliteMasterCount} | sqlite_schema: {diag.sqliteSchemaCount}</span>
+              </div>
+            )}
           </div>
-          <span className="readonly-tag">{t.readOnly}</span>
         </header>
 
         <div className="content-body">
@@ -109,19 +135,26 @@ function App() {
               jumpPageInput={jumpPageInput}
               tableSearchTerm={tableSearchTerm}
               dataSearchTerm={dataSearchTerm}
-              dbList={dbList}
-              diag={diag}
-              dbInfo={dbInfo}
               activeSchemaType={activeSchemaType}
               indexMeta={indexMeta}
               triggerMeta={triggerMeta}
-              onLoadSchema={(item, page) => loadSchemaRows(item, page, dataSearchTerm)}
-              onJumpPage={() => jumpToPage(selectedSchema, currentPage, totalRows, jumpPageInput, (item, page) => loadSchemaRows(item, page, dataSearchTerm))}
+              onLoadSchema={(item, page) => loadSchemaRows(item, page, dataSearchTerm, sortState)}
+              onJumpPage={() => jumpToPage(selectedSchema, currentPage, totalRows, jumpPageInput, (item, page) => loadSchemaRows(item, page, dataSearchTerm, sortState))}
               onJumpPageInputChange={(value) => dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: value })}
               onSetTableSearch={(value) => dispatch({ type: 'SET_TABLE_SEARCH_TERM', payload: value })}
-              onSetDataSearch={(value) => dispatch({ type: 'SET_DATA_SEARCH_TERM', payload: value })}
+              onSetDataSearch={(value) => {
+                dispatch({ type: 'SET_DATA_SEARCH_TERM', payload: value });
+                if (selectedSchema) {
+                  loadSchemaRows(selectedSchema, 1, value, sortState);
+                }
+              }}
               onSetActiveSchemaType={(value) => dispatch({ type: 'SET_ACTIVE_SCHEMA_TYPE', payload: value })}
-              onSetSortState={(value) => dispatch({ type: 'SET_SORT_STATE', payload: value })}
+              onSetSortState={(value) => {
+                dispatch({ type: 'SET_SORT_STATE', payload: value });
+                if (selectedSchema) {
+                  loadSchemaRows(selectedSchema, 1, dataSearchTerm, value);
+                }
+              }}
               loading={loading}
               language={language}
             />

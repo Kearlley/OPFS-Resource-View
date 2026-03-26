@@ -69,7 +69,7 @@ export default defineConfig({
       input: {
         devtools: resolve(__dirname, 'devtools.html'),
         panel: resolve(__dirname, 'panel.html'),
-        contentScript: resolve(__dirname, 'content-script.js')
+        contentScript: resolve(__dirname, 'contentScript.js')
       },
       output: {
         entryFileNames: '[name].js',

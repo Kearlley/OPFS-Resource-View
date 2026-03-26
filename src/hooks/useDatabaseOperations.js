@@ -3,6 +3,27 @@ import { qIdent, qQualified, readSqliteHeader, flattenTree, parseTriggerMeta } f
 import { PAGE_SIZE, SCHEMA_TYPES, SCHEMA_TYPE_ORDER_SQL, SCHEMA_TYPE_IN_SQL } from '../constants';
 import { isSqlite, isImage, isText } from '../utils/helpers';
 
+async function readDatabaseFiles(path) {
+  const dbBytes = await inspectedFs.readBytes(path);
+  let walBytes = null;
+  let shmBytes = null;
+  try { walBytes = await inspectedFs.readBytes(`${path}-wal`); } catch (_) { walBytes = null; }
+  try { shmBytes = await inspectedFs.readBytes(`${path}-shm`); } catch (_) { shmBytes = null; }
+  return { dbBytes, walBytes, shmBytes };
+}
+
+async function writeTempDatabase(tempPath, dbBytes, walBytes, shmBytes) {
+  await writeExtensionOpfsFile(tempPath, dbBytes);
+  if (walBytes) await writeExtensionOpfsFile(`${tempPath}-wal`, walBytes);
+  if (shmBytes) await writeExtensionOpfsFile(`${tempPath}-shm`, shmBytes);
+}
+
+function dispatchPagingReset(dispatch, totalRows = 0, page = 1) {
+  dispatch({ type: 'SET_TOTAL_ROWS', payload: totalRows });
+  dispatch({ type: 'SET_CURRENT_PAGE', payload: page });
+  dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: String(page) });
+}
+
 export function useDatabaseOperations(sqliteWorker, dispatch) {
   let currentMonitoringPath = null;
   let cleanupFileMonitor = null;
@@ -16,7 +37,7 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
     return rows;
   };
 
-  const loadSchemaRows = async (item, page = 1, dataSearchTerm = '') => {
+  const loadSchemaRows = async (item, page = 1, dataSearchTerm = '', sortState = { key: '', dir: 'asc' }) => {
     dispatch({ type: 'SET_SELECTED_SCHEMA', payload: item });
     dispatch({ type: 'SET_GRID_COLUMNS', payload: [] });
     dispatch({ type: 'SET_GRID_ROWS', payload: [] });
@@ -52,14 +73,17 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
           whereClause = ` WHERE ${searchConditions}`;
         }
 
+        let orderClause = '';
+        if (sortState.key) {
+          orderClause = ` ORDER BY ${qIdent(sortState.key)} ${sortState.dir === 'asc' ? 'ASC' : 'DESC'}`;
+        }
+
         const countSql = `SELECT count(*) AS cnt FROM ${target}${whereClause}`;
         const countRows = await execRowsLogged(countSql, 'object');
         const allRows = Number(countRows[0]?.cnt ?? 0);
-        dispatch({ type: 'SET_TOTAL_ROWS', payload: allRows });
-        dispatch({ type: 'SET_CURRENT_PAGE', payload: safePage });
-        dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: String(safePage) });
+        dispatchPagingReset(dispatch, allRows, safePage);
 
-        const dataSql = `SELECT * FROM ${target}${whereClause} LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
+        const dataSql = `SELECT * FROM ${target}${whereClause}${orderClause} LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
         const resultRows = await execRowsLogged(dataSql, 'object');
         const columns = resultRows[0] ? Object.keys(resultRows[0]) : Object.keys(columnMap);
         dispatch({ type: 'SET_GRID_ROWS', payload: resultRows });
@@ -102,9 +126,7 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
         const tableName = item.tbl_name;
 
         if (!tableName || cols.length === 0) {
-          dispatch({ type: 'SET_TOTAL_ROWS', payload: 0 });
-          dispatch({ type: 'SET_CURRENT_PAGE', payload: 1 });
-          dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: '1' });
+          dispatchPagingReset(dispatch, 0, 1);
           dispatch({ type: 'SET_GRID_ROWS', payload: [] });
           dispatch({ type: 'SET_GRID_COLUMNS', payload: [] });
           dispatch({ type: 'SET_COLUMN_TYPES', payload: {} });
@@ -119,9 +141,7 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
         const countSql = `SELECT count(*) AS cnt FROM ${tableTarget}`;
         const countRows = await execRowsLogged(countSql, 'object');
         const allRows = Number(countRows[0]?.cnt ?? 0);
-        dispatch({ type: 'SET_TOTAL_ROWS', payload: allRows });
-        dispatch({ type: 'SET_CURRENT_PAGE', payload: safePage });
-        dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: String(safePage) });
+        dispatchPagingReset(dispatch, allRows, safePage);
 
         const dataSql = `SELECT ${columnExpr} FROM ${tableTarget} ORDER BY ${orderExpr} LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
         const resultRows = await execRowsLogged(dataSql, 'object');
@@ -151,16 +171,12 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
         dispatch({ type: 'SET_GRID_ROWS', payload: [row] });
         dispatch({ type: 'SET_GRID_COLUMNS', payload: columns });
         dispatch({ type: 'SET_COLUMN_TYPES', payload: Object.fromEntries(columns.map((c) => [c, ''])) });
-        dispatch({ type: 'SET_TOTAL_ROWS', payload: 1 });
-        dispatch({ type: 'SET_CURRENT_PAGE', payload: 1 });
-        dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: '1' });
+        dispatchPagingReset(dispatch, 1, 1);
         dispatch({ type: 'SET_STATUS', payload: `已显示触发器定义 ${dbName}.${item.name}` });
         return;
       }
 
-      dispatch({ type: 'SET_TOTAL_ROWS', payload: 0 });
-      dispatch({ type: 'SET_CURRENT_PAGE', payload: 1 });
-      dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: '1' });
+      dispatchPagingReset(dispatch, 0, 1);
       dispatch({ type: 'SET_STATUS', payload: `已选择 ${item.type} ${item.name}` });
     } catch (err) {
       dispatch({ type: 'SET_STATUS', payload: `加载数据失败: ${err.message}` });
@@ -222,29 +238,9 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
       await sqliteWorker.init();
       await sqliteWorker.close();
 
-      const dbBytes = await inspectedFs.readBytes(node.path);
-      const walPath = `${node.path}-wal`;
-      const shmPath = `${node.path}-shm`;
-
-      let walBytes = null;
-      let shmBytes = null;
-
-      try {
-        walBytes = await inspectedFs.readBytes(walPath);
-      } catch (_) {
-        walBytes = null;
-      }
-
-      try {
-        shmBytes = await inspectedFs.readBytes(shmPath);
-      } catch (_) {
-        shmBytes = null;
-      }
-
+      const { dbBytes, walBytes, shmBytes } = await readDatabaseFiles(node.path);
       const tempPath = `cache/${Date.now()}-${node.name}`;
-      await writeExtensionOpfsFile(tempPath, dbBytes);
-      if (walBytes) await writeExtensionOpfsFile(`${tempPath}-wal`, walBytes);
-      if (shmBytes) await writeExtensionOpfsFile(`${tempPath}-shm`, shmBytes);
+      await writeTempDatabase(tempPath, dbBytes, walBytes, shmBytes);
 
       await sqliteWorker.open(tempPath);
       dispatch({ type: 'SET_STATUS', payload: `SQL> OPEN ${tempPath}` });
@@ -334,33 +330,12 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
             dispatch({ type: 'SET_LOADING', payload: true });
             await sqliteWorker.close();
             
-            const newDbBytes = await inspectedFs.readBytes(changedPath);
-            const newWalPath = `${changedPath}-wal`;
-            const newShmPath = `${changedPath}-shm`;
-            
-            let newWalBytes = null;
-            let newShmBytes = null;
-            
-            try {
-              newWalBytes = await inspectedFs.readBytes(newWalPath);
-            } catch (_) {
-              newWalBytes = null;
-            }
-            
-            try {
-              newShmBytes = await inspectedFs.readBytes(newShmPath);
-            } catch (_) {
-              newShmBytes = null;
-            }
-            
+            const { dbBytes: newDbBytes, walBytes: newWalBytes, shmBytes: newShmBytes } = await readDatabaseFiles(changedPath);
             const newTempPath = `cache/${Date.now()}-${node.name}`;
-            await writeExtensionOpfsFile(newTempPath, newDbBytes);
-            if (newWalBytes) await writeExtensionOpfsFile(`${newTempPath}-wal`, newWalBytes);
-            if (newShmBytes) await writeExtensionOpfsFile(`${newTempPath}-shm`, newShmBytes);
+            await writeTempDatabase(newTempPath, newDbBytes, newWalBytes, newShmBytes);
             
             await sqliteWorker.open(newTempPath);
             
-            // 重新加载数据库信息和schema
             const newDbListRows = await execRowsLogged('PRAGMA database_list', 'object');
             const newMappedDbList = newDbListRows
               .map((r) => ({ seq: r.seq, name: r.name, file: r.file }))

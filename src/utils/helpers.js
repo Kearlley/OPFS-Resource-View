@@ -1,20 +1,12 @@
 import { SQLITE_EXTS, IMAGE_EXTS, TEXT_EXTS } from '../constants';
 
-// 文件类型判断函数
-export function isSqlite(name = '') {
-  const lower = name.toLowerCase();
-  return SQLITE_EXTS.some((ext) => lower.endsWith(ext));
+function createExtensionChecker(extensions) {
+  return (name = '') => extensions.some((ext) => name.toLowerCase().endsWith(ext));
 }
 
-export function isImage(name = '') {
-  const lower = name.toLowerCase();
-  return IMAGE_EXTS.some((ext) => lower.endsWith(ext));
-}
-
-export function isText(name = '') {
-  const lower = name.toLowerCase();
-  return TEXT_EXTS.some((ext) => lower.endsWith(ext));
-}
+export const isSqlite = createExtensionChecker(SQLITE_EXTS);
+export const isImage = createExtensionChecker(IMAGE_EXTS);
+export const isText = createExtensionChecker(TEXT_EXTS);
 
 // SQL 标识符处理函数
 export function qIdent(v) {

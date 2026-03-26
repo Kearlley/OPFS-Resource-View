@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pagination } from './Pagination';
 import { SchemaBrowser } from './SchemaBrowser';
-import { DatabaseInfo } from './DatabaseInfo';
 import { DataGrid } from './DataGrid';
 import { SchemaMeta } from './SchemaMeta';
 import { PAGE_SIZE } from '../constants';
@@ -19,9 +18,6 @@ export function SqliteViewer({
   jumpPageInput,
   tableSearchTerm,
   dataSearchTerm,
-  dbList,
-  diag,
-  dbInfo,
   activeSchemaType,
   indexMeta,
   triggerMeta,
@@ -36,6 +32,19 @@ export function SqliteViewer({
   language
 }) {
   const t = useTranslation(language);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopySql = async () => {
+    if (selectedSchema?.sql) {
+      try {
+        await navigator.clipboard.writeText(selectedSchema.sql);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
 
   return (
     <div className="db-layout">
@@ -48,15 +57,36 @@ export function SqliteViewer({
         onSetTableSearch={onSetTableSearch}
         onSetActiveSchemaType={onSetActiveSchemaType}
         language={language}
-        dbList={dbList}
-        diag={diag}
-        dbInfo={dbInfo}
       />
 
       <div className="result-pane">
         <div className="section-title">{t.dataPreview} {selectedSchema ? `· ${(selectedSchema.dbName || 'main')}.${selectedSchema.name} (${selectedSchema.type})` : ''}</div>
-        {selectedSchema?.sql && <pre className="sql-box">{selectedSchema.sql}</pre>}
-        
+
+        <div className="sql-meta-row">
+          {selectedSchema?.sql && (
+            <div className="sql-box-wrapper">
+              <div className="sql-box-header">
+                <span className="sql-box-label">{t.createStatement}</span>
+                <button className="copy-btn" onClick={handleCopySql} disabled={!selectedSchema?.sql}>
+                  {copied ? t.copied : t.copySql}
+                </button>
+              </div>
+              <pre className="sql-box">{selectedSchema.sql}</pre>
+            </div>
+          )}
+
+          {selectedSchema && (
+            <div className="diag-box-container">
+              <SchemaMeta
+                selectedSchema={selectedSchema}
+                indexMeta={indexMeta}
+                triggerMeta={triggerMeta}
+                language={language}
+              />
+            </div>
+          )}
+        </div>
+
         <Pagination
           currentPage={currentPage}
           totalRows={totalRows}
@@ -69,18 +99,7 @@ export function SqliteViewer({
           disabled={!selectedSchema}
           language={language}
         />
-        
-        {selectedSchema && (
-          <div className="diag-box-container">
-            <SchemaMeta
-              selectedSchema={selectedSchema}
-              indexMeta={indexMeta}
-              triggerMeta={triggerMeta}
-              language={language}
-            />
-          </div>
-        )}
-        
+
         <DataGrid
           gridColumns={gridColumns}
           gridRows={gridRows}

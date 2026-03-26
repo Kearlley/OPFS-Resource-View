@@ -4,7 +4,7 @@ export const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.s
 export const TEXT_EXTS = ['.txt', '.log', '.json', '.md', '.csv', '.xml', '.yaml', '.yml', '.js', '.ts', '.html', '.css'];
 
 // 分页大小常量
-export const PAGE_SIZE = 50;
+export const PAGE_SIZE = 100;
 
 // 数据库 schema 相关常量
 export const SCHEMA_TYPES = ['table', 'view', 'index', 'trigger'];
