@@ -20,7 +20,7 @@ OPFS Resource View is a Chrome browser extension that provides a DevTools panel 
 - ⚙️ **File Operations**: Support creating files/directories, renaming, deleting, and downloading files
 - 📤 **File Upload**: Upload local files to OPFS
 - 🌍 **Internationalization Support**: Support Chinese and English languages, default to English
-- 🔄 **Badge Auto-update**: Automatically update the file count badge when the browser tab loads
+- 🔄 **Badge Auto-update**: Automatically update the file count badge when the browser tab loads, using content script to detect OPFS files
 
 ## Technology Stack
 
