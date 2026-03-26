@@ -48,13 +48,11 @@ function copyExtensionAssets() {
     closeBundle() {
       const distDir = resolve(__dirname, 'dist');
       const manifestSrc = resolve(__dirname, 'manifest.json');
-      const contentScriptSrc = resolve(__dirname, 'content-script.js');
       const backgroundSrc = resolve(__dirname, 'background.js');
 
       mkdirSync(distDir, { recursive: true });
 
       if (existsSync(manifestSrc)) cpSync(manifestSrc, resolve(distDir, 'manifest.json'));
-      if (existsSync(contentScriptSrc)) cpSync(contentScriptSrc, resolve(distDir, 'content-script.js'));
       if (existsSync(backgroundSrc)) cpSync(backgroundSrc, resolve(distDir, 'background.js'));
 
       copySqliteWasmAssets(distDir);
@@ -70,7 +68,13 @@ export default defineConfig({
     rollupOptions: {
       input: {
         devtools: resolve(__dirname, 'devtools.html'),
-        panel: resolve(__dirname, 'panel.html')
+        panel: resolve(__dirname, 'panel.html'),
+        contentScript: resolve(__dirname, 'content-script.js')
+      },
+      output: {
+        entryFileNames: '[name].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]'
       }
     }
   }
