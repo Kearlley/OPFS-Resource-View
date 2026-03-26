@@ -149,10 +149,11 @@ function App() {
                 }
               }}
               onSetActiveSchemaType={(value) => dispatch({ type: 'SET_ACTIVE_SCHEMA_TYPE', payload: value })}
-              onSetSortState={(value) => {
-                dispatch({ type: 'SET_SORT_STATE', payload: value });
+              onSetSortState={(fn) => {
+                const newSortState = typeof fn === 'function' ? fn(sortState) : fn;
+                dispatch({ type: 'SET_SORT_STATE', payload: newSortState });
                 if (selectedSchema) {
-                  loadSchemaRows(selectedSchema, 1, dataSearchTerm, value);
+                  loadSchemaRows(selectedSchema, 1, dataSearchTerm, newSortState);
                 }
               }}
               loading={loading}
