@@ -56,6 +56,25 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   badgeUpdateQueue.delete(tabId);
 });
 
-// 当标签加载完成时，不需要主动通知devtools面板
-// devtools面板会在打开时自动调用refreshTree()获取文件计数
-// 这样可以避免连接错误，因为devtools面板可能还未打开
+// 当标签加载完成时，通过content script获取OPFS文件计数并更新角标
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && isValidTabId(tabId)) {
+    // 向content script发送消息，获取OPFS文件计数
+    chrome.tabs.sendMessage(tabId, {
+      type: 'opfs:fileCount'
+    }, (response) => {
+      // 处理响应或错误
+      if (chrome.runtime.lastError) {
+        // 静默处理错误，可能是因为content script未注入或页面不支持OPFS
+        return;
+      }
+      
+      if (response?.ok && typeof response.result === 'number') {
+        const count = response.result;
+        // 更新角标
+        tabCounts.set(tabId, count);
+        setBadge(tabId, count);
+      }
+    });
+  }
+});
