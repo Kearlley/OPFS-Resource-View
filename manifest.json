@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "OPFS Resource View",
+  "version": "0.1.0",
+  "description": "DevTools 面板：浏览 OPFS 文件系统，查看 SQLite 数据库、图片和文本文件。",
+  "devtools_page": "devtools.html",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "OPFS Resource View"
+  },
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "panel.html",
+        "lib/sqlite-wasm/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
