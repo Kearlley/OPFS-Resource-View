@@ -151,7 +151,7 @@ npm run dev
 
 ## 许可证
 
-MIT
+本项目使用 GNU General Public License v3.0 许可证。详情请查看 [licenses](licenses) 文件。
 
 ## 贡献
 
