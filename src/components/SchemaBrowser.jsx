@@ -1,6 +1,7 @@
 import React from 'react';
 import { SCHEMA_TYPES } from '../constants';
 import { useTranslation } from '../i18n';
+import { DatabaseInfo } from './DatabaseInfo';
 
 export function SchemaBrowser({
   schemaGroups,
@@ -10,7 +11,10 @@ export function SchemaBrowser({
   onLoadSchema,
   onSetTableSearch,
   onSetActiveSchemaType,
-  language
+  language,
+  dbList,
+  diag,
+  dbInfo
 }) {
   const t = useTranslation(language);
   const flatSchemaCount = Object.values(schemaGroups).reduce((acc, group) => acc + (group?.length || 0), 0);
@@ -19,6 +23,8 @@ export function SchemaBrowser({
   return (
     <div className="schema-pane">
       <div className="section-title">Schema Browser ({flatSchemaCount})</div>
+      
+      <DatabaseInfo dbList={dbList} diag={diag} dbInfo={dbInfo} language={language} />
       
       <div className="schema-tabs" role="tablist" aria-label="Schema types">
         {SCHEMA_TYPES.map((type) => (

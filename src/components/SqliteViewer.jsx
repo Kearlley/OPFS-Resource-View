@@ -47,15 +47,14 @@ export function SqliteViewer({
         onSetTableSearch={onSetTableSearch}
         onSetActiveSchemaType={onSetActiveSchemaType}
         language={language}
+        dbList={dbList}
+        diag={diag}
+        dbInfo={dbInfo}
       />
 
       <div className="result-pane">
         <div className="section-title">{t.dataPreview} {selectedSchema ? `· ${(selectedSchema.dbName || 'main')}.${selectedSchema.name} (${selectedSchema.type})` : ''}</div>
         {selectedSchema?.sql && <pre className="sql-box">{selectedSchema.sql}</pre>}
-        
-        <div className="diag-box-container">
-          <DatabaseInfo dbList={dbList} diag={diag} dbInfo={dbInfo} language={language} />
-        </div>
         
         <Pagination
           currentPage={currentPage}
