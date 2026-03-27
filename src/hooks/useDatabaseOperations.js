@@ -69,7 +69,8 @@ export function useDatabaseOperations(sqliteWorker, dispatch) {
         const infoColumns = Object.keys(columnMap);
         let whereClause = '';
         if (dataSearchTerm.trim()) {
-          const searchConditions = infoColumns.map(col => `${qIdent(col)} LIKE '%${dataSearchTerm}%'`).join(' OR ');
+          const escapedSearchTerm = dataSearchTerm.replaceAll("'", "''");
+          const searchConditions = infoColumns.map(col => `${qIdent(col)} LIKE '%${escapedSearchTerm}%'`).join(' OR ');
           whereClause = ` WHERE ${searchConditions}`;
         }
 
