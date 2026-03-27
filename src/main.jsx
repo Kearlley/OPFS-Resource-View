@@ -138,7 +138,7 @@ function App() {
               activeSchemaType={activeSchemaType}
               indexMeta={indexMeta}
               triggerMeta={triggerMeta}
-              onLoadSchema={(item, page) => loadSchemaRows(item, page, dataSearchTerm, sortState)}
+              onLoadSchema={(item, page) => loadSchemaRows(item, page, dataSearchTerm)}
               onJumpPage={() => jumpToPage(selectedSchema, currentPage, totalRows, jumpPageInput, (item, page) => loadSchemaRows(item, page, dataSearchTerm, sortState))}
               onJumpPageInputChange={(value) => dispatch({ type: 'SET_JUMP_PAGE_INPUT', payload: value })}
               onSetTableSearch={(value) => dispatch({ type: 'SET_TABLE_SEARCH_TERM', payload: value })}
